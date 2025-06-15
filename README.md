@@ -46,6 +46,8 @@ The agent should be able to:
   * The user can save threads to revisit later
   * The user can delete an individual thread
   * The user can delete/clear all threads
+  * The thread list is displayed in the left-most sidebar
+  * The thread list can be hidden to provide more space for the other elements in the UI
 
 Any further changes will be documented here and marked as complete in the TODOs section below once it's implemented.
 
@@ -55,6 +57,7 @@ List of tasks and ideas for the project. They are not listed in any particular o
 
 * [x] Add save thread functionality
 * [x] Add new thread functionality
+* [x] Make the thread list collapsible to provide more space for the other elements in the UI
 * [ ] Add a settings page to configure the agent's behavior and to store the user's API key and configure the agent's to take the user's API key from settings rather than `.env`
 * [x] Allow for file uploads to the agent for analysis, processing and summarization
 * [ ] Implement user authentication so this can be served publically while keeping user data private
