@@ -1,9 +1,6 @@
 import { defineStore } from 'pinia';
 
-// This lets TypeScript know that the VITE_... variables will be available
-// VITE handles this via import.meta.env, so we don't need to declare it here.
-
-// Define interfaces for our data structures for better type safety
+// --- TYPE DEFINITIONS ---
 interface FileAttachment {
   name: string;
   type: string;
@@ -38,6 +35,7 @@ interface DisplayContent {
   type: 'markdown' | 'reminders';
 }
 
+// --- HELPER FUNCTIONS ---
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -59,24 +57,24 @@ const createWelcomeThread = (): Thread => ({
 });
 
 
-// Define the Pinia store
+// --- PINIA STORE DEFINITION ---
 export const useAgentStore = defineStore('agent', {
   state: () => {
-    let savedThreads: Thread[] = [];
+    let savedState: { threads: Thread[], activeThreadId?: number } = { threads: [] };
     try {
       const saved = localStorage.getItem('friday-threads');
       if (saved) {
-        savedThreads = JSON.parse(saved);
+        savedState = JSON.parse(saved);
       }
     } catch (e) {
       console.error("Could not load saved threads from Local Storage.", e);
     }
 
-    const threads = savedThreads.length > 0 ? savedThreads : [createWelcomeThread()];
+    const threads = savedState.threads && savedState.threads.length > 0 ? savedState.threads : [createWelcomeThread()];
 
     return {
       threads: threads,
-      activeThreadId: threads[0]?.id ?? null,
+      activeThreadId: savedState.activeThreadId ?? threads[0]?.id ?? null,
       agentStatus: 'idle' as 'idle' | 'thinking' | 'listening',
       reminders: [] as Reminder[],
       suggestedQuestions: [] as string[],
@@ -150,16 +148,8 @@ export const useAgentStore = defineStore('agent', {
           audioConfig: { audioEncoding: 'MP3' },
         };
 
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            const errorBody = await response.json();
-            throw new Error(`Google TTS request failed: ${errorBody.error.message}`);
-        }
+        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (!response.ok) throw new Error('Google TTS request failed.');
         
         const result = await response.json();
         if (result.audioContent && !this.isMuted) {
@@ -171,7 +161,6 @@ export const useAgentStore = defineStore('agent', {
           this.activeAudio = audio;
           this.activeAudio.play();
           this.activeAudio.onended = () => { this.activeAudio = null; };
-          return;
         }
       } catch (error) {
         console.error("Google Text-to-Speech API failed, falling back to browser speech.", error);
@@ -193,6 +182,7 @@ export const useAgentStore = defineStore('agent', {
     startNewThread() {
       this.stopAudio();
       const newThread = createWelcomeThread();
+      newThread.title = "New Conversation";
       this.threads.push(newThread);
       this.activeThreadId = newThread.id;
     },
@@ -218,6 +208,13 @@ export const useAgentStore = defineStore('agent', {
         this.activeThreadId = this.threads[0].id;
     },
 
+    updateThreadTitle(threadId: number, newTitle: string) {
+        const thread = this.threads.find(t => t.id === threadId);
+        if (thread && newTitle.trim()) {
+            thread.title = newTitle.trim();
+        }
+    },
+    
     clearActiveFile() {
         if (!this.activeThread) return;
         this.activeThread.activeFile = null;
@@ -300,10 +297,7 @@ export const useAgentStore = defineStore('agent', {
 
         if (file) {
           parts.push({
-            inline_data: {
-              mime_type: file.type,
-              data: file.base64
-            }
+            inline_data: { mime_type: file.type, data: file.base64 }
           });
         }
         
@@ -317,7 +311,7 @@ export const useAgentStore = defineStore('agent', {
         this.speak(textResponse);
         
         const promptHeading = `## ${prompt}`;
-        if (this.activeThread.displayContent.title === 'Welcome' || !this.activeThread.displayContent.title.startsWith("Thread:")) {
+        if (this.activeThread.displayContent.title === 'Welcome' || !this.activeThread.title.startsWith("Thread:")) {
           this.activeThread.displayContent = { title: `Thread: ${prompt}`, content: `${promptHeading}\n\n${textResponse}`, type: 'markdown' };
           this.activeThread.title = prompt.length > 25 ? prompt.substring(0, 22) + '...' : prompt;
         } else {

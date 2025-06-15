@@ -65,10 +65,9 @@ List of tasks and ideas for the project. They are not listed in any particular o
 * [ ] Add logging
 * [ ] Add Electron support for desktop app
 * [ ] Figure out if it's possible to login to external sites like Quora or Reddit to retrieve information
-* [ ] Research if it's possible to enhance the current shortcuts to select a link from the results
 * [ ] Create a mobile-friendly version of the app
 * [x] Explore if it's possible to integrate with Google's text to speech APIs to improve the voices used in the app
-* [ ] Explore if it's possible to integrate with Google's speech to text APIs to improve speech recognition
+* [ ] Explore if it's possible to integrate with Google's speech to text  APIs to improve speech recognition (see NOTES.md for further discussion)
 * [x] Add additional shortcuts for Wikipedia and Stack Overflow
 * [ ] Evaluate if it's possible to improve the summarization capabilities of the agent to something similar to NotebookML
 * [x] Can we integrate other AI models for things like image recognition and text generation? (**Gemini handles this well**)

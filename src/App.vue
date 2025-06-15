@@ -1,31 +1,54 @@
 <template>
   <div class="flex h-full w-full bg-white shadow-lg rounded-lg overflow-hidden">
     <!-- Thread Sidebar -->
-    <div class="w-64 bg-slate-50 border-r border-slate-200 flex flex-col">
-      <div class="p-4 border-b border-slate-200">
-        <h2 class="text-lg font-semibold text-slate-800">Threads</h2>
+    <div class="w-64 bg-slate-100 border-r border-slate-200 flex flex-col p-2 space-y-4">
+      <div class="flex items-center justify-between flex-shrink-0 px-2">
+        <button class="p-2 hover:bg-slate-200 rounded-full text-slate-600">
+          <icon-menu :size="20" />
+        </button>
+        <button class="p-2 hover:bg-slate-200 rounded-full text-slate-600">
+           <icon-search :size="20" />
+        </button>
       </div>
-      <div class="flex-1 overflow-y-auto custom-scrollbar">
+       <button @click="startNewThread" class="w-full text-sm font-semibold bg-slate-200 text-slate-700 rounded-md px-4 py-2 hover:bg-slate-300 transition">
+          <span class="flex items-center justify-center"><icon-edit :size="16" class="mr-2"/>New chat</span>
+        </button>
+      <div class="flex-1 overflow-y-auto custom-scrollbar space-y-2">
+        <h3 class="px-4 text-sm font-semibold text-slate-500 mt-2">Recent</h3>
         <ul>
           <li v-for="thread in threads" :key="thread.id" class="group">
-            <!-- FIX: Changed the parent element from a button to a div to prevent nesting buttons -->
-            <div :class="['w-full text-left px-4 py-2 text-sm flex items-center justify-between', activeThreadId === thread.id ? 'bg-blue-100' : '']">
-              <button @click="loadThread(thread.id)" :class="['flex-grow text-left truncate', activeThreadId === thread.id ? 'text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200 rounded-md -m-2 p-2']">
-                <span class="truncate">{{ thread.title }}</span>
+            <div :class="['w-full text-left pr-2 pl-4 py-2 text-sm flex items-center justify-between rounded-md', activeThreadId === thread.id ? 'bg-slate-200' : 'hover:bg-slate-200/70']">
+              <button @click="loadThread(thread.id)" :class="['flex-grow text-left truncate', activeThreadId === thread.id ? 'text-slate-800 font-semibold' : 'text-slate-600']">
+                <!-- FIX: Conditional rendering for editing title -->
+                <span v-if="editingThreadId !== thread.id" @dblclick="startEditingTitle(thread)" class="truncate">{{ thread.title }}</span>
+                <input v-else
+                       :ref="el => { if (el) titleInputRefs[thread.id] = el as HTMLInputElement }"
+                       type="text"
+                       v-model="editingTitle"
+                       @keyup.enter="saveTitle(thread.id)"
+                       @blur="saveTitle(thread.id)"
+                       class="bg-white w-full -m-1 p-1 rounded border border-blue-500 text-slate-800 font-semibold" />
               </button>
-              <button @click.stop="deleteThread(thread.id)" class="p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-200 text-red-500 transition flex-shrink-0 ml-2">
-                <icon-trash :size="14" />
-              </button>
+              <div class="flex items-center flex-shrink-0 ml-2">
+                  <button @click.stop="startEditingTitle(thread)" class="p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-slate-300 text-slate-500 transition">
+                    <icon-pencil :size="14" />
+                  </button>
+                  <button @click.stop="deleteThread(thread.id)" class="p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-200 text-red-500 transition">
+                    <icon-trash :size="14" />
+                  </button>
+              </div>
             </div>
           </li>
         </ul>
       </div>
       <div class="p-2 border-t border-slate-200 space-y-2">
-        <button @click="startNewThread" class="w-full text-sm font-semibold bg-blue-500 text-white rounded-md px-4 py-2 hover:bg-blue-600 transition">
-          <span class="flex items-center justify-center"><icon-plus :size="14" class="mr-2"/>New Thread</span>
+         <button @click="handleSettingsClick" class="w-full flex items-center text-sm text-slate-600 hover:bg-slate-200 rounded-md p-2">
+            <icon-settings :size="16" class="mr-2" />
+            <span>Settings & help</span>
         </button>
-        <button @click="clearAllThreads" class="w-full text-sm font-semibold bg-red-500 text-white rounded-md px-4 py-2 hover:bg-red-600 transition disabled:opacity-50" :disabled="threads.length <= 1">
-          Clear All
+        <button @click="clearAllThreads" class="w-full flex items-center text-sm text-red-600 hover:bg-red-100 rounded-md p-2 transition disabled:opacity-50" :disabled="threads.length <= 1">
+            <icon-trash :size="16" class="mr-2" />
+            <span>Clear all threads</span>
         </button>
       </div>
     </div>
@@ -34,7 +57,7 @@
     <div class="flex-1 flex flex-col" v-if="activeThread">
       <div class="w-full flex h-full">
         <div class="w-full md:w-1/2 h-full flex flex-col border-r border-slate-200">
-          <header class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 flex-shrink-0">
+          <header class="p-4 border-b border-slate-200 flex items-center justify-between bg-white flex-shrink-0">
             <h1 class="text-xl font-bold text-slate-700">Friday</h1>
             <div class="flex items-center space-x-4">
               <button @click="summarize" :disabled="agentStatus !== 'idle' || activeThread.conversation.length <= 1" class="flex items-center space-x-2 text-sm bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-600 font-semibold py-1 px-3 rounded-full transition">
@@ -46,7 +69,7 @@
               </button>
             </div>
           </header>
-          <div ref="chatLog" class="flex-1 p-4 overflow-y-auto custom-scrollbar">
+          <div ref="chatLog" class="flex-1 p-4 overflow-y-auto custom-scrollbar bg-white">
             <div v-for="message in activeThread.conversation" :key="message.id" :class="['flex mb-4', message.from === 'user' ? 'justify-end' : 'justify-start']" class="assistant-bubble">
               <div :class="['rounded-2xl p-3 max-w-sm', message.from === 'user' ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-800']">
                  <div class="flex items-start space-x-2">
@@ -70,7 +93,7 @@
               <button v-for="q in suggestedQuestions" :key="q" @click="askSuggestion(q)" class="suggestion-chip bg-slate-100 text-slate-700 text-sm font-medium px-3 py-1 rounded-full hover:bg-slate-200 transition">{{ q }}</button>
             </div>
           </div>
-          <footer class="p-4 border-t border-slate-200 bg-slate-50 flex-shrink-0">
+          <footer class="p-4 border-t border-slate-200 bg-white flex-shrink-0">
             <div v-if="activeThread.activeFile" class="px-1 pb-2">
               <div class="flex items-center justify-between bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
                 <span class="truncate">Context: {{ activeThread.activeFile.name }}</span>
@@ -90,8 +113,8 @@
             </div>
           </footer>
         </div>
-        <div class="hidden md:flex md:w-1/2 h-full flex-col">
-           <header class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 flex-shrink-0">
+        <div class="hidden md:flex md:w-2/3 h-full flex-col">
+           <header class="p-4 border-b border-slate-200 flex items-center justify-between bg-white flex-shrink-0">
             <h2 class="text-xl font-bold text-slate-700">{{ activeThread.displayContent.title }}</h2>
             <div class="flex items-center space-x-4">
               <div class="flex items-center space-x-2 text-sm text-slate-500">
@@ -103,7 +126,7 @@
               </button>
             </div>
            </header>
-          <div class="flex-1 p-6 overflow-y-auto custom-scrollbar">
+          <div class="flex-1 p-6 overflow-y-auto custom-scrollbar bg-white">
             <div v-if="displayMode === 'rendered'" class="prose prose-slate max-w-none" v-html="renderMarkdown(activeThread.displayContent.content)"></div>
             <pre v-else class="raw-markdown"><code>{{ activeThread.displayContent.content }}</code></pre>
           </div>
@@ -134,10 +157,27 @@ const {
 } = storeToRefs(agentStore);
 
 const activeThread = computed(() => agentStore.activeThread);
-
 const userInput = ref('');
 const chatLog = ref<HTMLDivElement | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
+const editingThreadId = ref<number | null>(null);
+const editingTitle = ref('');
+const titleInputRefs = ref<Record<number, HTMLInputElement>>({});
+
+const startEditingTitle = (thread: any) => {
+  editingThreadId.value = thread.id;
+  editingTitle.value = thread.title;
+  nextTick(() => {
+    titleInputRefs.value[thread.id]?.focus();
+  });
+};
+
+const saveTitle = (threadId: number) => {
+  if (editingThreadId.value === threadId) {
+    agentStore.updateThreadTitle(threadId, editingTitle.value);
+    editingThreadId.value = null;
+  }
+};
 
 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 let recognition: any | null = SpeechRecognition ? new SpeechRecognition() : null;
@@ -249,6 +289,10 @@ const clearAllThreads = () => {
     if (confirm('Are you sure you want to delete ALL threads? This cannot be undone.')) {
         agentStore.clearAllThreads();
     }
+};
+
+const handleSettingsClick = () => {
+    alert("Settings functionality will be implemented later.");
 };
 
 const scrollToBottom = () => {
