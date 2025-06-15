@@ -18,6 +18,14 @@ interface Message {
   file?: FileAttachment;
 }
 
+interface Thread {
+  id: number;
+  title: string;
+  conversation: Message[];
+  displayContent: DisplayContent;
+  activeFile: FileAttachment | null;
+}
+
 interface Reminder {
   id: number;
   text: string;
@@ -42,27 +50,39 @@ async function fileToBase64(file: File): Promise<string> {
 // Define the Pinia store
 export const useAgentStore = defineStore('agent', {
   state: () => ({
-    conversation: [
-      { id: 1, from: 'assistant', text: "Hello! My name is Friday. How can I assist you today?" },
-      { id: 2, from: 'assistant', text: "You can use shortcuts like `/wp`, `/so`, `/arxiv`, `/mdn`, or `/web.dev` to search specific sites." }
-    ] as Message[],
+    threads: [
+      {
+        id: 1,
+        title: "Welcome",
+        conversation: [ 
+          { id: 1, from: 'assistant', text: "Hello! My name is Friday. How can I assist you today?" },
+          { id: 2, from: 'assistant', text: "You can use shortcuts like `/wp`, `/so`, `/arxiv`, `/mdn`, or `/web.dev` to search specific sites." }
+        ],
+        displayContent: { title: 'Welcome', content: 'Your requested information will appear here.', type: 'markdown' },
+        activeFile: null
+      }
+    ] as Thread[],
+    activeThreadId: 1 as number | null,
     agentStatus: 'idle' as 'idle' | 'thinking' | 'listening',
-    displayContent: { title: 'Welcome', content: 'Your requested information will appear here.', type: 'markdown' } as DisplayContent,
     reminders: [] as Reminder[],
     suggestedQuestions: [] as string[],
     micPermission: 'prompt' as 'prompt' | 'granted' | 'denied',
     displayMode: 'rendered' as 'rendered' | 'raw',
     isMuted: false,
-    activeFile: null as FileAttachment | null,
     ttsSystemAnnounced: false,
-    activeAudio: null as HTMLAudioElement | null // Centralized audio control
+    activeAudio: null as HTMLAudioElement | null
   }),
-
-  // The 'getters' block was a leftover and has been removed.
+  
+  getters: {
+    activeThread(state): Thread | undefined {
+      return state.threads.find(t => t.id === state.activeThreadId);
+    }
+  },
 
   actions: {
     addMessage(from: 'user' | 'assistant', text: string, file?: FileAttachment) {
-      this.conversation.push({ id: Date.now(), from, text, file });
+      if (!this.activeThread) return;
+      this.activeThread.conversation.push({ id: Date.now(), from, text, file });
       this.suggestedQuestions = [];
     },
 
@@ -72,6 +92,13 @@ export const useAgentStore = defineStore('agent', {
         this.activeAudio = null;
       }
       window.speechSynthesis.cancel();
+    },
+
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        if (this.isMuted) {
+            this.stopAudio();
+        }
     },
 
     async speak(rawText: string) {
@@ -120,7 +147,7 @@ export const useAgentStore = defineStore('agent', {
         }
         
         const result = await response.json();
-        if (result.audioContent) {
+        if (result.audioContent && !this.isMuted) {
           if (!this.ttsSystemAnnounced) {
               this.addMessage('assistant', "Premium voice enabled.");
               this.ttsSystemAnnounced = true;
@@ -148,30 +175,46 @@ export const useAgentStore = defineStore('agent', {
       }
     },
     
-    toggleMute() {
-        this.isMuted = !this.isMuted;
-        if (this.isMuted) {
-            this.stopAudio();
-        }
+    startNewThread() {
+      this.stopAudio();
+      const newId = Date.now();
+      this.threads.push({
+        id: newId,
+        title: "New Conversation",
+        conversation: [
+          { id: 1, from: 'assistant', text: "New thread started. How can I help?" }
+        ],
+        displayContent: { title: 'Welcome', content: 'Your requested information will appear here.', type: 'markdown' },
+        activeFile: null
+      });
+      this.activeThreadId = newId;
+    },
+
+    loadThread(threadId: number) {
+      this.activeThreadId = threadId;
+      this.suggestedQuestions = [];
     },
     
     clearActiveFile() {
-        this.activeFile = null;
+        if (!this.activeThread) return;
+        this.activeThread.activeFile = null;
         this.addMessage('assistant', "File context has been cleared.");
     },
 
     async handleFileUpload(file: File, prompt: string) {
+        if (!this.activeThread) return;
         this.agentStatus = 'thinking';
         const base64DataUrl = await fileToBase64(file);
         const base64Data = base64DataUrl.split(',')[1];
         const fileAttachment: FileAttachment = { name: file.name, type: file.type, previewUrl: base64DataUrl, base64: base64Data };
-        this.activeFile = fileAttachment;
+        this.activeThread.activeFile = fileAttachment;
         const messageText = prompt || `What should I know about this ${file.type.split('/')[0]}?`;
         this.addMessage('user', messageText, fileAttachment);
         this.callGeminiAPI(messageText, fileAttachment);
     },
 
     handleUserInput(userMessage: string) {
+      if (!this.activeThread) return;
       this.addMessage('user', userMessage);
       this.stopAudio();
       
@@ -210,7 +253,7 @@ export const useAgentStore = defineStore('agent', {
         this.addMessage('assistant', message);
         this.speak(message);
         const newContent = this.reminders.map(r => `- ${r.text}`).join('\n');
-        this.displayContent = { title: 'Active Reminders', content: newContent, type: 'reminders' };
+        this.activeThread.displayContent = { title: 'Active Reminders', content: newContent, type: 'reminders' };
         this.agentStatus = 'idle';
       } else if (userMessage.toLowerCase().trim() === 'what time is it?') {
         const time = new Date().toLocaleTimeString();
@@ -219,11 +262,12 @@ export const useAgentStore = defineStore('agent', {
         this.speak(message);
         this.agentStatus = 'idle';
       } else {
-        this.callGeminiAPI(userMessage, this.activeFile);
+        this.callGeminiAPI(userMessage, this.activeThread.activeFile);
       }
     },
 
     async callGeminiAPI(prompt: string, file: FileAttachment | null = null) {
+      if (!this.activeThread) return;
       try {
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
         if (!apiKey) { throw new Error("API Key is missing. Please ensure your `.env` file is in the project root and contains `VITE_GEMINI_API_KEY=...`. You may need to restart the Vite server."); }
@@ -233,10 +277,7 @@ export const useAgentStore = defineStore('agent', {
 
         if (file) {
           parts.push({
-            inline_data: {
-              mime_type: file.type,
-              data: file.base64
-            }
+            inline_data: { mime_type: file.type, data: file.base64 }
           });
         }
         
@@ -250,10 +291,11 @@ export const useAgentStore = defineStore('agent', {
         this.speak(textResponse);
         
         const promptHeading = `## ${prompt}`;
-        if (this.displayContent.title === 'Welcome' || !this.displayContent.title.startsWith("Thread:")) {
-          this.displayContent = { title: `Thread: ${prompt}`, content: `${promptHeading}\n\n${textResponse}`, type: 'markdown' };
+        if (this.activeThread.displayContent.title === 'Welcome' || !this.activeThread.displayContent.title.startsWith("Thread:")) {
+          this.activeThread.displayContent = { title: `Thread: ${prompt}`, content: `${promptHeading}\n\n${textResponse}`, type: 'markdown' };
+          this.activeThread.title = prompt.length > 25 ? prompt.substring(0, 22) + '...' : prompt;
         } else {
-          this.displayContent.content += `\n\n---\n\n${promptHeading}\n\n${textResponse}`;
+          this.activeThread.displayContent.content += `\n\n---\n\n${promptHeading}\n\n${textResponse}`;
         }
         this.suggestNextQuestions(textResponse);
       } catch (error) {
@@ -265,9 +307,9 @@ export const useAgentStore = defineStore('agent', {
     },
 
     async summarizeConversation() {
-      if (this.conversation.length <= 1) return;
+      if (!this.activeThread || this.activeThread.conversation.length <= 1) return;
       this.agentStatus = 'thinking';
-      const history = this.conversation.map(m => `${m.from}: ${m.text}`).join('\n\n');
+      const history = this.activeThread.conversation.map(m => `${m.from}: ${m.text}`).join('\n\n');
       const prompt = `Please provide a concise, bullet-point summary of the following conversation:\n\n---\n\n${history}`;
       try {
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -278,11 +320,11 @@ export const useAgentStore = defineStore('agent', {
         if (!response.ok) throw new Error(`API request failed`);
         const result = await response.json();
         const summary = result.candidates?.[0]?.content?.parts?.[0]?.text || "Could not generate a summary.";
-        this.displayContent = { title: 'Conversation Summary', content: summary, type: 'markdown' };
+        this.activeThread.displayContent = { title: 'Conversation Summary', content: summary, type: 'markdown' };
         this.speak("Here is a summary of our conversation.");
       } catch (error) {
         console.error("Summary error:", error);
-        this.displayContent = { title: 'Error', content: `Could not generate a summary. ${(error as Error).message}`, type: 'markdown' };
+        this.activeThread.displayContent = { title: 'Error', content: `Could not generate a summary. ${(error as Error).message}`, type: 'markdown' };
       } finally {
         this.agentStatus = 'idle';
       }
