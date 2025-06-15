@@ -47,31 +47,46 @@ async function fileToBase64(file: File): Promise<string> {
   });
 }
 
+const createWelcomeThread = (): Thread => ({
+  id: Date.now(),
+  title: "Welcome",
+  conversation: [ 
+    { id: 1, from: 'assistant', text: "Hello! My name is Friday. How can I assist you today?" },
+    { id: 2, from: 'assistant', text: "You can use shortcuts like `/wp`, `/so`, `/arxiv`, `/mdn`, or `/web.dev` to search specific sites." }
+  ],
+  displayContent: { title: 'Welcome', content: 'Your requested information will appear here.', type: 'markdown' },
+  activeFile: null
+});
+
+
 // Define the Pinia store
 export const useAgentStore = defineStore('agent', {
-  state: () => ({
-    threads: [
-      {
-        id: 1,
-        title: "Welcome",
-        conversation: [ 
-          { id: 1, from: 'assistant', text: "Hello! My name is Friday. How can I assist you today?" },
-          { id: 2, from: 'assistant', text: "You can use shortcuts like `/wp`, `/so`, `/arxiv`, `/mdn`, or `/web.dev` to search specific sites." }
-        ],
-        displayContent: { title: 'Welcome', content: 'Your requested information will appear here.', type: 'markdown' },
-        activeFile: null
+  state: () => {
+    let savedThreads: Thread[] = [];
+    try {
+      const saved = localStorage.getItem('friday-threads');
+      if (saved) {
+        savedThreads = JSON.parse(saved);
       }
-    ] as Thread[],
-    activeThreadId: 1 as number | null,
-    agentStatus: 'idle' as 'idle' | 'thinking' | 'listening',
-    reminders: [] as Reminder[],
-    suggestedQuestions: [] as string[],
-    micPermission: 'prompt' as 'prompt' | 'granted' | 'denied',
-    displayMode: 'rendered' as 'rendered' | 'raw',
-    isMuted: false,
-    ttsSystemAnnounced: false,
-    activeAudio: null as HTMLAudioElement | null
-  }),
+    } catch (e) {
+      console.error("Could not load saved threads from Local Storage.", e);
+    }
+
+    const threads = savedThreads.length > 0 ? savedThreads : [createWelcomeThread()];
+
+    return {
+      threads: threads,
+      activeThreadId: threads[0]?.id ?? null,
+      agentStatus: 'idle' as 'idle' | 'thinking' | 'listening',
+      reminders: [] as Reminder[],
+      suggestedQuestions: [] as string[],
+      micPermission: 'prompt' as 'prompt' | 'granted' | 'denied',
+      displayMode: 'rendered' as 'rendered' | 'raw',
+      isMuted: false,
+      ttsSystemAnnounced: false,
+      activeAudio: null as HTMLAudioElement | null 
+    };
+  },
   
   getters: {
     activeThread(state): Thread | undefined {
@@ -103,7 +118,7 @@ export const useAgentStore = defineStore('agent', {
 
     async speak(rawText: string) {
       if (this.isMuted || !rawText.trim()) return;
-
+      
       const cleanText = rawText
         .replace(/```[\s\S]*?```/g, '(a code block)')
         .replace(/`[^`]*`/g, '')
@@ -177,17 +192,9 @@ export const useAgentStore = defineStore('agent', {
     
     startNewThread() {
       this.stopAudio();
-      const newId = Date.now();
-      this.threads.push({
-        id: newId,
-        title: "New Conversation",
-        conversation: [
-          { id: 1, from: 'assistant', text: "New thread started. How can I help?" }
-        ],
-        displayContent: { title: 'Welcome', content: 'Your requested information will appear here.', type: 'markdown' },
-        activeFile: null
-      });
-      this.activeThreadId = newId;
+      const newThread = createWelcomeThread();
+      this.threads.push(newThread);
+      this.activeThreadId = newThread.id;
     },
 
     loadThread(threadId: number) {
@@ -195,6 +202,22 @@ export const useAgentStore = defineStore('agent', {
       this.suggestedQuestions = [];
     },
     
+    deleteThread(threadId: number) {
+      this.threads = this.threads.filter(t => t.id !== threadId);
+      if (this.activeThreadId === threadId) {
+        if (this.threads.length > 0) {
+          this.activeThreadId = this.threads[0].id;
+        } else {
+          this.startNewThread();
+        }
+      }
+    },
+    
+    clearAllThreads() {
+        this.threads = [createWelcomeThread()];
+        this.activeThreadId = this.threads[0].id;
+    },
+
     clearActiveFile() {
         if (!this.activeThread) return;
         this.activeThread.activeFile = null;
@@ -277,7 +300,10 @@ export const useAgentStore = defineStore('agent', {
 
         if (file) {
           parts.push({
-            inline_data: { mime_type: file.type, data: file.base64 }
+            inline_data: {
+              mime_type: file.type,
+              data: file.base64
+            }
           });
         }
         

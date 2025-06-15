@@ -41,6 +41,11 @@ The agent should be able to:
 * Added file upload (audio and images) for analysis, processing, and summarization
   * The file remains available in the conversation until you remove it
 * Improved speech using Google's Wave-Net TTS API
+* Added thread management functionality. The delete functions are destructive and cannot be undone, so use them with caution
+  * The user can create new threads to better manage conversations
+  * The user can save threads to revisit later
+  * The user can delete an individual thread
+  * The user can delete/clear all threads
 
 Any further changes will be documented here and marked as complete in the TODOs section below once it's implemented.
 
@@ -48,7 +53,8 @@ Any further changes will be documented here and marked as complete in the TODOs 
 
 List of tasks and ideas for the project. They are not listed in any particular order, and some may be more important than others.
 
-* [ ] Add save thread functionality
+* [x] Add save thread functionality
+* [x] Add new thread functionality
 * [ ] Add a settings page to configure the agent's behavior and to store the user's API key and configure the agent's to take the user's API key from settings rather than `.env`
 * [x] Allow for file uploads to the agent for analysis, processing and summarization
 * [ ] Implement user authentication so this can be served publically while keeping user data private
@@ -67,15 +73,3 @@ List of tasks and ideas for the project. They are not listed in any particular o
 * [ ] Evaluate if it's possible to improve the summarization capabilities of the agent to something similar to NotebookML
 * [x] Can we integrate other AI models for things like image recognition and text generation? (**Gemini handles this well**)
 * [ ] Explore if the agent, as currently implemented, can learn from user interactions to improve its responses over time
-
-## Further Thoughts
-
-### Local Storage to save conversation threads?
-
-## Do we need a third-party service to do speech recognition?
-
-The Web Speech API provides a built-in speech recognition capability that works in modern browsers. However, if you require more advanced features or better accuracy, you might consider integrating a third-party service like Google's Speech-to-Text API, OpenAI's Whisper or [Deepgram](https://deepgram.com/). These services offer more robust speech recognition capabilities and can handle a wider range of accents and languages.
-
-The downside is that these services require an API key and may incur costs based on usage beyond their free tier limits.
-
-An ideal solution would be to use the Web Speech API for basic functionality and enable a third-party service as an option for users who need more advanced features or better accuracy via a toggle in a settings menu.

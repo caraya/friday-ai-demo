@@ -16,6 +16,7 @@ import IconVolumeX from './components/IconVolumeX.vue';
 import IconPaperclip from './components/IconPaperclip.vue';
 import IconX from './components/IconX.vue';
 import IconPlus from './components/IconPlus.vue';
+import IconTrash from './components/IconTrash.vue';
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -35,5 +36,6 @@ app.component('icon-volume-x', IconVolumeX);
 app.component('icon-paperclip', IconPaperclip);
 app.component('icon-x', IconX);
 app.component('icon-plus', IconPlus);
+app.component('icon-trash', IconTrash);
 
 app.mount('#app');

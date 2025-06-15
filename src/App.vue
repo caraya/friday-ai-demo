@@ -7,21 +7,30 @@
       </div>
       <div class="flex-1 overflow-y-auto custom-scrollbar">
         <ul>
-          <li v-for="thread in threads" :key="thread.id">
-            <button @click="loadThread(thread.id)" 
-                    :class="['w-full text-left px-4 py-2 text-sm truncate', activeThreadId === thread.id ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200']">
-              {{ thread.title }}
-            </button>
+          <li v-for="thread in threads" :key="thread.id" class="group">
+            <!-- FIX: Changed the parent element from a button to a div to prevent nesting buttons -->
+            <div :class="['w-full text-left px-4 py-2 text-sm flex items-center justify-between', activeThreadId === thread.id ? 'bg-blue-100' : '']">
+              <button @click="loadThread(thread.id)" :class="['flex-grow text-left truncate', activeThreadId === thread.id ? 'text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200 rounded-md -m-2 p-2']">
+                <span class="truncate">{{ thread.title }}</span>
+              </button>
+              <button @click.stop="deleteThread(thread.id)" class="p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-200 text-red-500 transition flex-shrink-0 ml-2">
+                <icon-trash :size="14" />
+              </button>
+            </div>
           </li>
         </ul>
       </div>
-      <div class="p-2 border-t border-slate-200">
+      <div class="p-2 border-t border-slate-200 space-y-2">
         <button @click="startNewThread" class="w-full text-sm font-semibold bg-blue-500 text-white rounded-md px-4 py-2 hover:bg-blue-600 transition">
           <span class="flex items-center justify-center"><icon-plus :size="14" class="mr-2"/>New Thread</span>
+        </button>
+        <button @click="clearAllThreads" class="w-full text-sm font-semibold bg-red-500 text-white rounded-md px-4 py-2 hover:bg-red-600 transition disabled:opacity-50" :disabled="threads.length <= 1">
+          Clear All
         </button>
       </div>
     </div>
     
+    <!-- Main Chat Interface -->
     <div class="flex-1 flex flex-col" v-if="activeThread">
       <div class="w-full flex h-full">
         <div class="w-full md:w-1/2 h-full flex flex-col border-r border-slate-200">
@@ -230,6 +239,18 @@ const startNewThread = () => {
   agentStore.startNewThread();
 };
 
+const deleteThread = (threadId: number) => {
+    if (confirm('Are you sure you want to delete this thread?')) {
+        agentStore.deleteThread(threadId);
+    }
+};
+
+const clearAllThreads = () => {
+    if (confirm('Are you sure you want to delete ALL threads? This cannot be undone.')) {
+        agentStore.clearAllThreads();
+    }
+};
+
 const scrollToBottom = () => {
   nextTick(() => {
     chatLog.value?.scrollTo({ top: chatLog.value.scrollHeight, behavior: 'smooth' });
@@ -237,16 +258,14 @@ const scrollToBottom = () => {
   });
 };
 
-// **FIX:** Watch the activeThread itself. When it changes, watch its conversation.
 watch(
-  activeThread,
-  (newActiveThread) => {
-    if (newActiveThread) {
-      // This inner watch is automatically cleaned up when the outer watch re-runs.
-      watch(() => newActiveThread.conversation, scrollToBottom, { deep: true, immediate: true });
+  () => activeThread.value?.conversation,
+  (newConversation) => {
+    if (newConversation) {
+      scrollToBottom();
     }
   },
-  { immediate: true }
+  { deep: true, immediate: true }
 );
 
 </script>
