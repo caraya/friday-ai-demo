@@ -40,7 +40,7 @@ The agent should be able to:
 * Added Gemini's capability to summarize the conversation thread
 * Added file upload (audio and images) for analysis, processing, and summarization
   * The file remains available in the conversation until you remove it
-* Improved speech using GOogle's Wave-Net TTS API
+* Improved speech using Google's Wave-Net TTS API
 
 Any further changes will be documented here and marked as complete in the TODOs section below once it's implemented.
 
@@ -67,3 +67,15 @@ List of tasks and ideas for the project. They are not listed in any particular o
 * [ ] Evaluate if it's possible to improve the summarization capabilities of the agent to something similar to NotebookML
 * [x] Can we integrate other AI models for things like image recognition and text generation? (**Gemini handles this well**)
 * [ ] Explore if the agent, as currently implemented, can learn from user interactions to improve its responses over time
+
+## Further Thoughts
+
+### Local Storage to save conversation threads?
+
+## Do we need a third-party service to do speech recognition?
+
+The Web Speech API provides a built-in speech recognition capability that works in modern browsers. However, if you require more advanced features or better accuracy, you might consider integrating a third-party service like Google's Speech-to-Text API, OpenAI's Whisper or [Deepgram](https://deepgram.com/). These services offer more robust speech recognition capabilities and can handle a wider range of accents and languages.
+
+The downside is that these services require an API key and may incur costs based on usage beyond their free tier limits.
+
+An ideal solution would be to use the Web Speech API for basic functionality and enable a third-party service as an option for users who need more advanced features or better accuracy via a toggle in a settings menu.
