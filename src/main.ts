@@ -3,7 +3,7 @@ import { createPinia } from 'pinia'
 import './assets/main.css'
 import App from './App.vue'
 
-// Import all icon components
+// Import icon components...
 import IconUser from './components/IconUser.vue';
 import IconBot from './components/IconBot.vue';
 import IconMic from './components/IconMic.vue';
@@ -28,22 +28,17 @@ const app = createApp(App);
 const pinia = createPinia();
 
 // --- LOCAL STORAGE PLUGIN FOR PINIA ---
-// This plugin will automatically save the state of the agent store to local storage
-// whenever a change is made. This is more robust than manual saving.
 pinia.use(({ store }) => {
-  store.$subscribe((_, state) => { // FIX: The 'mutation' parameter is unused, so we replace it with '_'
-    // We only want to persist the 'threads' state.
-    const dataToSave = {
-        threads: state.threads
-    };
-    localStorage.setItem('friday-threads', JSON.stringify(dataToSave));
+  store.$subscribe((_, state) => {
+    // Save the entire state, which now includes settings.
+    localStorage.setItem('friday-threads', JSON.stringify(state));
   });
 });
 
 
 app.use(pinia);
 
-// Register icons globally
+// Register icons globally...
 app.component('icon-user', IconUser);
 app.component('icon-bot', IconBot);
 app.component('icon-mic', IconMic);

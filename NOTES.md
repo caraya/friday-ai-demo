@@ -28,3 +28,13 @@ The Web Speech API provides a built-in speech recognition capability that works 
 The downside is that these services require an API key and may incur costs based on usage beyond their free tier limits.
 
 An ideal solution would be to use the Web Speech API for basic functionality and enable a third-party service as an option for users who need more advanced features or better accuracy via a toggle in a settings menu.
+
+## ELectron, Tauri, or PWA?
+
+If you want to create a desktop application, you have a few options:
+
+- **Electron**: A popular framework for building cross-platform desktop applications using web technologies (HTML, CSS, JavaScript). It provides a lot of flexibility and has a large ecosystem of libraries and tools. However, it can result in larger application sizes and higher resource usage
+- **Tauri**: A newer framework that allows you to build smaller, more efficient desktop applications using web technologies. It uses the system's webview instead of bundling a full browser engine like Electron, resulting in smaller application sizes and lower resource usage
+  - Tauri also provides a Rust backend, which can be beneficial for performance and security.
+- **Progressive Web App (PWA)**: A web application that can be installed on a user's device and provides a native app-like experience. PWAs can work offline, send push notifications, and access device features like camera and microphone
+  - PWAs may not have the same level of access to system resources as Electron or Tauri applications when not running in a Chromium-based browser, but they can be a good choice for cross-platform compatibility and ease of deployment

@@ -48,6 +48,11 @@ The agent should be able to:
   * The user can delete/clear all threads
   * The thread list is displayed in the left-most sidebar
   * The thread list can be hidden to provide more space for the other elements in the UI
+* Added a settings panel for configuring the agent's behavior
+  * Provides configuration settings for Google's text-to-speech and speech-to-text APIs
+    * text to speech is enabled by default
+    * speech to text is disabled by default
+* When the thread list is hidden the user can still create a new thread or open the settings panel
 
 Any further changes will be documented here and marked as complete in the TODOs section below once it's implemented.
 
@@ -58,10 +63,9 @@ List of tasks and ideas for the project. They are not listed in any particular o
 * [x] Add save thread functionality
 * [x] Add new thread functionality
 * [x] Make the thread list collapsible to provide more space for the other elements in the UI
-* [ ] Add a settings page to configure the agent's behavior and to store the user's API key and configure the agent's to take the user's API key from settings rather than `.env`
+* [x] Add a settings page to configure the agent's behavior and to store the user's API key and configure the agent's to take the user's API key from settings rather than `.env`
 * [x] Allow for file uploads to the agent for analysis, processing and summarization
 * [ ] Implement user authentication so this can be served publically while keeping user data private
-* [ ] Add unit tests for all components
 * [ ] Improve error handling in API calls
 * [ ] Create documentation with examples
 * [ ] Implement a dark mode theme
@@ -70,7 +74,7 @@ List of tasks and ideas for the project. They are not listed in any particular o
 * [ ] Figure out if it's possible to login to external sites like Quora or Reddit to retrieve information
 * [ ] Create a mobile-friendly version of the app
 * [x] Explore if it's possible to integrate with Google's text to speech APIs to improve the voices used in the app
-* [ ] Explore if it's possible to integrate with Google's speech to text  APIs to improve speech recognition (see NOTES.md for further discussion)
+* [x] Explore if it's possible to integrate with Google's speech to text  APIs to improve speech recognition (see NOTES.md for further discussion)
 * [x] Add additional shortcuts for Wikipedia and Stack Overflow
 * [ ] Evaluate if it's possible to improve the summarization capabilities of the agent to something similar to NotebookML
 * [x] Can we integrate other AI models for things like image recognition and text generation? (**Gemini handles this well**)

@@ -4,9 +4,12 @@
       <!-- Collapsible Thread Sidebar -->
       <div class="flex flex-shrink-0 bg-slate-100 border-r border-slate-200">
         <!-- Always-Visible Icon Bar -->
-        <div class="flex flex-col items-center justify-between p-2 space-y-4">
+        <div :class="['flex flex-col items-center p-2 space-y-4 transition-colors duration-300', newThreadCue ? 'bg-blue-100' : '']">
           <button @click="toggleSidebar" class="p-2 hover:bg-slate-200 rounded-full text-slate-600">
             <icon-menu :size="20" />
+          </button>
+          <button v-if="!isSidebarOpen" @click="startNewThread" class="p-2 bg-slate-200 hover:bg-slate-300 rounded-full text-slate-700 transition" title="New Chat">
+            <icon-edit :size="20" />
           </button>
           <div class="flex-grow"></div> <!-- Spacer -->
           <button @click="handleSettingsClick" class="p-2 hover:bg-slate-200 rounded-full text-slate-600">
@@ -144,6 +147,8 @@
         </div>
       </div>
     </div>
+    <!-- Settings Panel Overlay -->
+    <SettingsPanel v-if="isSettingsOpen" />
   </div>
 </template>
 
@@ -154,6 +159,8 @@ import { storeToRefs } from 'pinia';
 import { marked } from 'marked';
 import Prism from 'prismjs';
 import 'prismjs/plugins/autoloader/prism-autoloader';
+import SettingsPanel from './components/SettingsPanel.vue';
+
 Prism.plugins.autoloader.languages_path = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/';
 
 const agentStore = useAgentStore();
@@ -164,7 +171,8 @@ const {
   agentStatus, 
   suggestedQuestions, 
   displayMode,
-  isMuted
+  isMuted,
+  isSettingsOpen
 } = storeToRefs(agentStore);
 
 const isSidebarOpen = ref(true);
@@ -175,6 +183,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const editingThreadId = ref<number | null>(null);
 const editingTitle = ref('');
 const titleInputRefs = ref<Record<number, HTMLInputElement>>({});
+const newThreadCue = ref(false);
 
 const startEditingTitle = (thread: any) => {
   editingThreadId.value = thread.id;
@@ -288,7 +297,16 @@ const loadThread = (threadId: number) => {
 };
 
 const startNewThread = () => {
+  const wasSidebarOpen = isSidebarOpen.value;
   agentStore.startNewThread();
+  if (!wasSidebarOpen) {
+    isSidebarOpen.value = true;
+    newThreadCue.value = true;
+    setTimeout(() => {
+      isSidebarOpen.value = false;
+      newThreadCue.value = false;
+    }, 400); 
+  }
 };
 
 const deleteThread = (threadId: number) => {
@@ -304,7 +322,7 @@ const clearAllThreads = () => {
 };
 
 const handleSettingsClick = () => {
-    alert("Settings functionality will be implemented later.");
+    agentStore.toggleSettingsPanel();
 };
 
 const toggleSidebar = () => {
