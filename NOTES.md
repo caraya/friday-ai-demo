@@ -29,7 +29,7 @@ The downside is that these services require an API key and may incur costs based
 
 An ideal solution would be to use the Web Speech API for basic functionality and enable a third-party service as an option for users who need more advanced features or better accuracy via a toggle in a settings menu.
 
-## ELectron, Tauri, or PWA?
+## Electron, Tauri, or PWA?
 
 If you want to create a desktop application, you have a few options:
 

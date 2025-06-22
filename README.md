@@ -63,13 +63,10 @@ List of tasks and ideas for the project. They are not listed in any particular o
 * [x] Add save thread functionality
 * [x] Add new thread functionality
 * [x] Make the thread list collapsible to provide more space for the other elements in the UI
-* [x] Add a settings page to configure the agent's behavior and to store the user's API key and configure the agent's to take the user's API key from settings rather than `.env`
+* [x] Add a settings page to configure the agent's behavior
 * [x] Allow for file uploads to the agent for analysis, processing and summarization
-* [ ] Implement user authentication so this can be served publically while keeping user data private
-* [ ] Improve error handling in API calls
 * [ ] Create documentation with examples
 * [ ] Implement a dark mode theme
-* [ ] Add logging
 * [ ] Add Electron support for desktop app
 * [ ] Figure out if it's possible to login to external sites like Quora or Reddit to retrieve information
 * [ ] Create a mobile-friendly version of the app
@@ -78,4 +75,8 @@ List of tasks and ideas for the project. They are not listed in any particular o
 * [x] Add additional shortcuts for Wikipedia and Stack Overflow
 * [ ] Evaluate if it's possible to improve the summarization capabilities of the agent to something similar to NotebookML
 * [x] Can we integrate other AI models for things like image recognition and text generation? (**Gemini handles this well**)
+* [ ] Evaluate what other third-party APIs can be integrated to enhance the agent's capabilities (e.g., weather, news, etc.)
+* [ ] Implement user authentication so this can be served publically while keeping user data private
+* [ ] Integrate with Gmail, Calendar and other Google APIs to report new content and manage tasks. This requires OAuth authentication and authorization
+* [ ] Explore if the agent can be extended to support more complex tasks like scheduling meetings, sending emails, managing calendars or to-do lists
 * [ ] Explore if the agent, as currently implemented, can learn from user interactions to improve its responses over time
