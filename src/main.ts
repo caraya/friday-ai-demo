@@ -3,7 +3,7 @@ import { createPinia } from 'pinia'
 import './assets/main.css'
 import App from './App.vue'
 
-// Import icon components...
+// Import all icon components
 import IconUser from './components/IconUser.vue';
 import IconBot from './components/IconBot.vue';
 import IconMic from './components/IconMic.vue';
@@ -30,15 +30,23 @@ const pinia = createPinia();
 // --- LOCAL STORAGE PLUGIN FOR PINIA ---
 pinia.use(({ store }) => {
   store.$subscribe((_, state) => {
-    // Save the entire state, which now includes settings.
-    localStorage.setItem('friday-threads', JSON.stringify(state));
+    // Create a new object with only the serializable data we want to persist.
+    const dataToSave = {
+        threads: state.threads,
+        activeThreadId: state.activeThreadId,
+        useGoogleTTS: state.useGoogleTTS,
+        useGoogleSTT: state.useGoogleSTT,
+        isMuted: state.isMuted,
+        displayMode: state.displayMode
+    };
+    localStorage.setItem('friday-threads', JSON.stringify(dataToSave));
   });
 });
 
 
 app.use(pinia);
 
-// Register icons globally...
+// Register icons globally
 app.component('icon-user', IconUser);
 app.component('icon-bot', IconBot);
 app.component('icon-mic', IconMic);

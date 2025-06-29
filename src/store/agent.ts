@@ -35,7 +35,6 @@ interface DisplayContent {
   type: 'markdown' | 'reminders';
 }
 
-// **FIX:** Explicitly define the shape of our store's state for TypeScript
 interface AgentState {
   threads: Thread[];
   activeThreadId: number | null;
@@ -47,13 +46,14 @@ interface AgentState {
   isMuted: boolean;
   ttsSystemAnnounced: boolean;
   activeAudio: HTMLAudioElement | null;
-  isSettingsOpen: boolean; // Added missing property
-  useGoogleTTS: boolean; // Added missing property
-  useGoogleSTT: boolean; // Added missing property
+  isSettingsOpen: boolean;
+  useGoogleTTS: boolean;
+  useGoogleSTT: boolean;
 }
 
+
 // --- HELPER FUNCTIONS ---
-async function fileToBase64(file: File): Promise<string> {
+async function fileToBase64(file: File | Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -77,13 +77,7 @@ const createWelcomeThread = (): Thread => ({
 // --- PINIA STORE DEFINITION ---
 export const useAgentStore = defineStore('agent', {
   state: (): AgentState => {
-    let savedState: { 
-      threads: Thread[], 
-      activeThreadId?: number | null,
-      useGoogleTTS?: boolean,
-      useGoogleSTT?: boolean,
-      isSettingsOpen?: boolean
-    } = { threads: [] };
+    let savedState: Partial<AgentState> = {};
     try {
       const saved = localStorage.getItem('friday-threads');
       if (saved) {
@@ -100,11 +94,11 @@ export const useAgentStore = defineStore('agent', {
       reminders: [],
       suggestedQuestions: [],
       micPermission: 'prompt',
-      displayMode: 'rendered',
-      isMuted: false,
+      displayMode: savedState.displayMode ?? 'rendered',
+      isMuted: savedState.isMuted ?? false,
       ttsSystemAnnounced: false,
       activeAudio: null,
-      isSettingsOpen: savedState.isSettingsOpen ?? false,
+      isSettingsOpen: false,
       useGoogleTTS: savedState.useGoogleTTS ?? true,
       useGoogleSTT: savedState.useGoogleSTT ?? false,
     };
@@ -139,10 +133,21 @@ export const useAgentStore = defineStore('agent', {
 
     async speak(rawText: string) {
       if (this.isMuted || !rawText.trim()) return;
-      const cleanText = rawText.replace(/```[\s\S]*?```/g, '(a code block)').replace(/`[^`]*`/g, '').replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1').replace(/!\[[^\]]*\]\([^\)]+\)/g, '').replace(/^[#\s*-\d\.]+/gm, '').replace(/[\*_~]/g, '');
+      
+      const cleanText = rawText
+        .replace(/```[\s\S]*?```/g, '(a code block)')
+        .replace(/`[^`]*`/g, '')
+        .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+        .replace(/!\[[^\]]*\]\([^\)]+\)/g, '')
+        .replace(/^[#\s*-\d\.]+/gm, '')
+        .replace(/[\*_~]/g, '');
+      
       if (!cleanText.trim()) return;
+
       this.stopAudio();
+      
       const ttsApiKey = import.meta.env.VITE_GOOGLE_TTS_API_KEY;
+      
       if (!ttsApiKey || !this.useGoogleTTS) {
         if (!this.ttsSystemAnnounced && this.useGoogleTTS) {
           this.addMessage('assistant', "No Google TTS API key found. Using standard browser voice.");
@@ -151,6 +156,7 @@ export const useAgentStore = defineStore('agent', {
         this.speakWithBrowser(cleanText);
         return;
       }
+
       try {
         const apiUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${ttsApiKey}`;
         const payload = { input: { text: cleanText }, voice: { languageCode: 'en-US', name: 'en-US-Wavenet-F' }, audioConfig: { audioEncoding: 'MP3' } };
@@ -159,9 +165,13 @@ export const useAgentStore = defineStore('agent', {
             const errorBody = await response.json();
             throw new Error(`Google TTS request failed: ${errorBody.error.message}`);
         }
+        
         const result = await response.json();
         if (result.audioContent && !this.isMuted) {
-          if (!this.ttsSystemAnnounced) { this.addMessage('assistant', "Premium voice enabled."); this.ttsSystemAnnounced = true; }
+          if (!this.ttsSystemAnnounced) {
+              this.addMessage('assistant', "Premium voice enabled.");
+              this.ttsSystemAnnounced = true;
+          }
           const audio = new Audio(`data:audio/mp3;base64,${result.audioContent}`);
           this.activeAudio = audio;
           this.activeAudio.play();
@@ -265,6 +275,49 @@ export const useAgentStore = defineStore('agent', {
         this.agentStatus = 'idle';
       } else {
         this.callGeminiAPI(userMessage, this.activeThread.activeFile);
+      }
+    },
+
+    async transcribeAudio(audioBlob: Blob) {
+      this.agentStatus = 'thinking';
+      try {
+        const sttApiKey = import.meta.env.VITE_GOOGLE_STT_API_KEY;
+        if (!sttApiKey) throw new Error("Google STT API Key not found.");
+
+        const base64Audio = await fileToBase64(audioBlob);
+        const audioBytes = base64Audio.split(',')[1];
+        
+        const apiUrl = `https://speech.googleapis.com/v1/speech:recognize?key=${sttApiKey}`;
+        const payload = {
+          config: {
+            encoding: 'WEBM_OPUS',
+            sampleRateHertz: 48000,
+            languageCode: 'en-US',
+          },
+          audio: {
+            content: audioBytes,
+          },
+        };
+
+        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (!response.ok) {
+            const errorBody = await response.json();
+            throw new Error(`Google STT request failed: ${errorBody.error.message}`);
+        }
+        const result = await response.json();
+        const transcription = result.results?.[0]?.alternatives?.[0]?.transcript;
+
+        if (transcription) {
+          this.handleUserInput(transcription);
+        } else {
+          this.addMessage('assistant', 'I received your audio but could not transcribe it.');
+        }
+
+      } catch (error) {
+        console.error("Google Speech-to-Text error:", error);
+        this.addMessage('assistant', `There was an error with premium speech recognition. ${(error as Error).message}`);
+      } finally {
+        this.agentStatus = 'idle';
       }
     },
 

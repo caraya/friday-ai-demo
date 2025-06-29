@@ -64,10 +64,8 @@
         </div>
       </div>
       
-      <!-- Main Content Area -->
       <div class="flex-1 flex flex-col" v-if="activeThread">
         <div class="w-full flex h-full">
-          <!-- Chat Panel -->
           <div class="w-full lg:w-1/3 h-full flex flex-col border-r border-slate-200">
             <header class="p-4 border-b border-slate-200 flex items-center justify-between bg-white flex-shrink-0">
               <h1 class="text-xl font-bold text-slate-700">Friday</h1>
@@ -141,7 +139,7 @@
              </header>
             <div class="flex-1 p-6 overflow-y-auto custom-scrollbar bg-white">
               <div v-if="displayMode === 'rendered'" class="prose prose-slate mx-auto" v-html="renderMarkdown(activeThread.displayContent.content)"></div>
-              <pre v-else class="raw-markdown"><code>{{ activeThread.displayContent.content }}</code></pre>
+              <pre v-else class="raw-markdown max-w-prose mx-auto w-full"><code>{{ activeThread.displayContent.content }}</code></pre>
             </div>
           </div>
         </div>
